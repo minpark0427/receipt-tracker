@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
       .update({
         location: result.establishment,
         date: result.date,
+        time: result.time,
         cost: result.total,
         original_currency: result.currency,
         ocr_confidence: result.confidence.overall

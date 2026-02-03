@@ -4,6 +4,7 @@ const TABSCANNER_BASE_URL = 'https://api.tabscanner.com'
 export interface TabscannerResult {
   establishment: string | null
   date: string | null
+  time: string | null
   total: number | null
   currency: string | null
   confidence: {
@@ -87,9 +88,14 @@ export async function processReceipt(imageUrl: string): Promise<TabscannerResult
       if (resultData.status === 'done') {
         const result = resultData.result || {}
 
+        const dateParts = result.date ? result.date.split(' ') : []
+        const dateOnly = dateParts[0] || null
+        const timeOnly = dateParts[1] || result.time || null
+        
         return {
           establishment: result.establishment || null,
-          date: result.date ? result.date.split(' ')[0] : null,
+          date: dateOnly,
+          time: timeOnly,
           total: result.total ? parseFloat(result.total) : null,
           currency: result.currency || null,
           confidence: {

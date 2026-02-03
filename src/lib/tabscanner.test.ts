@@ -14,6 +14,7 @@ describe('isTabscannerError', () => {
     const result: TabscannerResult = {
       establishment: 'Coffee Shop',
       date: '2025-01-15',
+      time: '14:30:00',
       total: 5.50,
       currency: 'USD',
       confidence: {
