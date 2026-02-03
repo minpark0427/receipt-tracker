@@ -7,6 +7,7 @@ import { UploadForm } from '@/components/UploadForm'
 import { ReceiptEditModal } from '@/components/ReceiptEditModal'
 import { ShareButton } from '@/components/ShareButton'
 import { useRealtimeReceipts } from '@/hooks/useRealtimeReceipts'
+import { ExportButton } from '@/components/ExportButton'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -192,9 +193,12 @@ export default function TripPage({ params }: TripPageProps) {
         />
 
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-            Receipts ({receipts.length})
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+              Receipts ({receipts.length})
+            </h2>
+            <ExportButton receipts={receipts} tripId={tripId} />
+          </div>
           {receipts.length === 0 ? (
             <p className="text-center text-zinc-500 py-8">
               No receipts yet. Upload your first receipt!
