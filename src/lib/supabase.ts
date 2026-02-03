@@ -7,6 +7,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export interface Trip {
   id: string
+  name: string
   created_at: string
   budget: number
   currency: string
