@@ -70,6 +70,16 @@ export default function Home() {
     setReceipts(prev => [receipt as unknown as Receipt, ...prev])
   }
 
+  function handleOcrComplete(updatedReceipt: Record<string, unknown>) {
+    setReceipts(prev =>
+      prev.map(r =>
+        r.id === (updatedReceipt as unknown as Receipt).id
+          ? (updatedReceipt as unknown as Receipt)
+          : r
+      )
+    )
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-black">
@@ -130,7 +140,11 @@ export default function Home() {
         </div>
 
         {trip && (
-          <UploadForm tripId={trip.id} onUploadComplete={handleUploadComplete} />
+          <UploadForm
+            tripId={trip.id}
+            onUploadComplete={handleUploadComplete}
+            onOcrComplete={handleOcrComplete}
+          />
         )}
 
         <div className="space-y-3">
