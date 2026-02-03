@@ -3,12 +3,14 @@
 import { useState, useEffect } from 'react'
 import { supabase, type Trip, type Receipt } from '@/lib/supabase'
 import { UploadForm } from '@/components/UploadForm'
+import { ReceiptEditModal } from '@/components/ReceiptEditModal'
 
 export default function Home() {
   const [trip, setTrip] = useState<Trip | null>(null)
   const [receipts, setReceipts] = useState<Receipt[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null)
 
   useEffect(() => {
     initializeTrip()
@@ -78,6 +80,14 @@ export default function Home() {
           : r
       )
     )
+  }
+
+  function handleReceiptSave(updatedReceipt: Receipt) {
+    setReceipts(prev => prev.map(r => r.id === updatedReceipt.id ? updatedReceipt : r))
+  }
+
+  function handleReceiptDelete(receiptId: string) {
+    setReceipts(prev => prev.filter(r => r.id !== receiptId))
   }
 
   if (loading) {
@@ -157,9 +167,10 @@ export default function Home() {
             </p>
           ) : (
             receipts.map(receipt => (
-              <div
+              <button
                 key={receipt.id}
-                className="bg-white dark:bg-zinc-900 rounded-lg p-4 shadow-sm flex items-center gap-4"
+                onClick={() => setSelectedReceipt(receipt)}
+                className="w-full bg-white dark:bg-zinc-900 rounded-lg p-4 shadow-sm flex items-center gap-4 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
               >
                 {receipt.image_url && (
                   <img
@@ -181,11 +192,20 @@ export default function Home() {
                     {receipt.cost !== null ? `$${receipt.cost.toFixed(2)}` : 'N/A'}
                   </p>
                 </div>
-              </div>
+              </button>
             ))
           )}
         </div>
       </div>
+
+      {selectedReceipt && (
+        <ReceiptEditModal
+          receipt={selectedReceipt}
+          onClose={() => setSelectedReceipt(null)}
+          onSave={handleReceiptSave}
+          onDelete={handleReceiptDelete}
+        />
+      )}
     </div>
   )
 }
