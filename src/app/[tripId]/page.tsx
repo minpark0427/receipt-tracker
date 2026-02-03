@@ -8,6 +8,7 @@ import { ReceiptEditModal } from '@/components/ReceiptEditModal'
 import { ShareButton } from '@/components/ShareButton'
 import { useRealtimeReceipts } from '@/hooks/useRealtimeReceipts'
 import { ExportButton } from '@/components/ExportButton'
+import { useToast } from '@/components/Toast'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -18,6 +19,7 @@ interface TripPageProps {
 export default function TripPage({ params }: TripPageProps) {
   const { tripId } = use(params)
   const router = useRouter()
+  const { showToast } = useToast()
 
   const [trip, setTrip] = useState<Trip | null>(null)
   const [receipts, setReceipts] = useState<Receipt[]>([])
@@ -26,6 +28,8 @@ export default function TripPage({ params }: TripPageProps) {
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null)
   const [editingName, setEditingName] = useState(false)
   const [tripName, setTripName] = useState('')
+  const [editingBudget, setEditingBudget] = useState(false)
+  const [budgetValue, setBudgetValue] = useState('')
 
   const { isConnected, lastEvent, clearLastEvent } = useRealtimeReceipts({
     tripId: trip?.id || null
@@ -78,6 +82,7 @@ export default function TripPage({ params }: TripPageProps) {
 
       setTrip(tripData)
       setTripName(tripData.name || 'Untitled Trip')
+      setBudgetValue(tripData.budget?.toString() || '1280')
       localStorage.setItem('tripId', tripId)
 
       const { data: receiptsData } = await supabase
@@ -120,13 +125,38 @@ export default function TripPage({ params }: TripPageProps) {
   async function saveTripName() {
     if (!tripName.trim() || !trip) return
     
-    await supabase
+    const { error } = await supabase
       .from('trips')
       .update({ name: tripName.trim() })
       .eq('id', trip.id)
     
+    if (error) {
+      showToast('Failed to save name', 'error')
+      return
+    }
+    
     setTrip({ ...trip, name: tripName.trim() })
     setEditingName(false)
+    showToast('Trip name updated', 'success')
+  }
+
+  async function saveBudget() {
+    if (!trip) return
+    const newBudget = parseFloat(budgetValue) || 1280
+    
+    const { error } = await supabase
+      .from('trips')
+      .update({ budget: newBudget })
+      .eq('id', trip.id)
+    
+    if (error) {
+      showToast('Failed to save budget', 'error')
+      return
+    }
+    
+    setTrip({ ...trip, budget: newBudget })
+    setEditingBudget(false)
+    showToast('Budget updated', 'success')
   }
 
   if (loading) {
@@ -253,9 +283,58 @@ export default function TripPage({ params }: TripPageProps) {
               style={{ width: `${percentUsed}%` }}
             />
           </div>
-          <p className="text-center mt-2 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-            ${budget.toFixed(2)} budget
-          </p>
+          {editingBudget ? (
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <span className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">$</span>
+              <input
+                type="number"
+                value={budgetValue}
+                onChange={(e) => setBudgetValue(e.target.value)}
+                className="w-32 text-lg font-semibold px-2 py-1 border border-zinc-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-center"
+                autoFocus
+                min="0"
+                step="0.01"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveBudget()
+                  if (e.key === 'Escape') {
+                    setBudgetValue(trip?.budget?.toString() || '1280')
+                    setEditingBudget(false)
+                  }
+                }}
+              />
+              <button
+                onClick={saveBudget}
+                className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </button>
+              <button
+                onClick={() => {
+                  setBudgetValue(trip?.budget?.toString() || '1280')
+                  setEditingBudget(false)
+                }}
+                className="p-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setEditingBudget(true)}
+              className="w-full text-center mt-2 group"
+            >
+              <span className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 inline-flex items-center gap-1">
+                ${budget.toFixed(2)} budget
+                <svg className="w-3 h-3 text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </span>
+            </button>
+          )}
         </div>
 
         <UploadForm
