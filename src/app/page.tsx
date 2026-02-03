@@ -7,6 +7,8 @@ import { supabase } from '@/lib/supabase'
 export default function Home() {
   const router = useRouter()
   const [creating, setCreating] = useState(false)
+  const [existingTripId, setExistingTripId] = useState<string | null>(null)
+  const [checking, setChecking] = useState(true)
 
   useEffect(() => {
     const storedTripId = localStorage.getItem('tripId')
@@ -19,13 +21,16 @@ export default function Home() {
         .single()
         .then(({ data }) => {
           if (data) {
-            router.replace(`/${storedTripId}`)
+            setExistingTripId(storedTripId)
           } else {
             localStorage.removeItem('tripId')
           }
+          setChecking(false)
         })
+    } else {
+      setChecking(false)
     }
-  }, [router])
+  }, [])
 
   async function createNewTrip() {
     setCreating(true)
@@ -60,16 +65,33 @@ export default function Home() {
         </div>
 
         <div className="space-y-4">
+          {existingTripId && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 shadow-sm border-2 border-blue-200 dark:border-blue-800">
+              <h2 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                Continue Your Trip
+              </h2>
+              <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
+                You have an existing trip in progress.
+              </p>
+              <button
+                onClick={() => router.push(`/${existingTripId}`)}
+                className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                Continue Trip
+              </button>
+            </div>
+          )}
+
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-              Start Tracking
+              {existingTripId ? 'Or Start Fresh' : 'Start Tracking'}
             </h2>
             <p className="text-sm text-zinc-500 mb-4">
               Create a new trip to start uploading receipts. Share the link with your team for collaborative tracking.
             </p>
             <button
               onClick={createNewTrip}
-              disabled={creating}
+              disabled={creating || checking}
               className="w-full px-6 py-3 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-lg font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors disabled:opacity-50"
             >
               {creating ? (
