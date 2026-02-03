@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { supabase, type Trip, type Receipt } from '@/lib/supabase'
 import { UploadForm } from '@/components/UploadForm'
 import { ReceiptEditModal } from '@/components/ReceiptEditModal'
+import { useRealtimeReceipts } from '@/hooks/useRealtimeReceipts'
 
 export default function Home() {
   const [trip, setTrip] = useState<Trip | null>(null)
@@ -12,9 +13,36 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null)
 
+  const { isConnected, lastEvent, clearLastEvent } = useRealtimeReceipts({
+    tripId: trip?.id || null
+  })
+
   useEffect(() => {
     initializeTrip()
   }, [])
+
+  useEffect(() => {
+    if (!lastEvent) return
+
+    switch (lastEvent.type) {
+      case 'INSERT':
+        setReceipts(prev => {
+          if (prev.some(r => r.id === lastEvent.receipt.id)) return prev
+          return [lastEvent.receipt, ...prev]
+        })
+        break
+      case 'UPDATE':
+        setReceipts(prev =>
+          prev.map(r => r.id === lastEvent.receipt.id ? lastEvent.receipt : r)
+        )
+        break
+      case 'DELETE':
+        setReceipts(prev => prev.filter(r => r.id !== lastEvent.receipt.id))
+        break
+    }
+
+    clearLastEvent()
+  }, [lastEvent, clearLastEvent])
 
   async function initializeTrip() {
     try {
@@ -121,8 +149,14 @@ export default function Home() {
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
             Receipt Tracker
           </h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center justify-center gap-2">
             Business Trip Budget
+            <span
+              className={`inline-block w-2 h-2 rounded-full ${
+                isConnected ? 'bg-green-500' : 'bg-zinc-400'
+              }`}
+              title={isConnected ? 'Real-time sync active' : 'Connecting...'}
+            />
           </p>
         </header>
 
