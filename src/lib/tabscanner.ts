@@ -32,25 +32,36 @@ export async function processReceipt(imageUrl: string): Promise<TabscannerResult
   }
 
   try {
+    const imageResponse = await fetch(imageUrl)
+    if (!imageResponse.ok) {
+      return { code: 'IMAGE_FETCH_FAILED', message: `Failed to fetch image: ${imageResponse.status}` }
+    }
+
+    const imageBlob = await imageResponse.blob()
+    
+    const formData = new FormData()
+    formData.append('file', imageBlob, 'receipt.jpg')
+
     const processResponse = await fetch(`${TABSCANNER_BASE_URL}/api/2/process`, {
       method: 'POST',
       headers: {
-        'apikey': TABSCANNER_API_KEY,
-        'Content-Type': 'application/json'
+        'apikey': TABSCANNER_API_KEY
       },
-      body: JSON.stringify({
-        documentUrl: imageUrl
-      })
+      body: formData
     })
 
-    if (!processResponse.ok) {
-      if (processResponse.status === 401) {
+    const processData = await processResponse.json()
+
+    if (!processResponse.ok || processData.status === 'failed') {
+      if (processResponse.status === 401 || processData.code === 401) {
         return { code: 'RATE_LIMIT', message: 'Tabscanner rate limit exceeded (200/month)' }
       }
-      return { code: 'PROCESS_FAILED', message: `Process request failed: ${processResponse.status}` }
+      return { 
+        code: 'PROCESS_FAILED', 
+        message: processData.message || `Process request failed: ${processResponse.status}` 
+      }
     }
 
-    const processData = await processResponse.json()
     const token = processData.token
 
     if (!token) {
@@ -78,7 +89,7 @@ export async function processReceipt(imageUrl: string): Promise<TabscannerResult
 
         return {
           establishment: result.establishment || null,
-          date: result.date || null,
+          date: result.date ? result.date.split(' ')[0] : null,
           total: result.total ? parseFloat(result.total) : null,
           currency: result.currency || null,
           confidence: {
