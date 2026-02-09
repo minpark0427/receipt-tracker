@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { type Receipt } from '@/lib/supabase'
+import { downloadReceiptImage } from '@/lib/downloadUtils'
 
 interface ReceiptEditModalProps {
   receipt: Receipt
@@ -27,7 +28,20 @@ export function ReceiptEditModal({ receipt, onClose, onSave, onDelete }: Receipt
   const [location, setLocation] = useState(receipt.location || '')
   const [cost, setCost] = useState(receipt.cost?.toString() || '')
   const [saving, setSaving] = useState(false)
+  const [downloading, setDownloading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const handleDownload = async () => {
+    if (!receipt.image_url) return
+    setDownloading(true)
+    try {
+      await downloadReceiptImage(receipt.image_url, receipt.location, receipt.date)
+    } catch {
+      setError('Download failed')
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -113,7 +127,23 @@ export function ReceiptEditModal({ receipt, onClose, onSave, onDelete }: Receipt
 
         {receipt.image_url && (
           <div className="p-4 border-b border-zinc-200 dark:border-zinc-700">
-            <img src={receipt.image_url} alt="Receipt" className="w-full h-48 object-contain rounded" />
+            <div className="relative group">
+              <img src={receipt.image_url} alt="Receipt" className="w-full h-48 object-contain rounded" />
+              <button
+                onClick={handleDownload}
+                disabled={downloading}
+                className="absolute top-2 right-2 p-2 bg-black/60 hover:bg-black/80 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+                title="Download image"
+              >
+                {downloading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
         )}
 

@@ -8,6 +8,7 @@ import { ReceiptEditModal } from '@/components/ReceiptEditModal'
 import { ShareButton } from '@/components/ShareButton'
 import { useRealtimeReceipts } from '@/hooks/useRealtimeReceipts'
 import { ExportButton } from '@/components/ExportButton'
+import { DownloadAllButton } from '@/components/DownloadAllButton'
 import { useToast } from '@/components/Toast'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -342,6 +343,8 @@ export default function TripPage({ params }: TripPageProps) {
           onUploadComplete={handleUploadComplete}
           onOcrComplete={handleOcrComplete}
         />
+
+        <DownloadAllButton receipts={receipts} tripName={trip?.name} />
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
