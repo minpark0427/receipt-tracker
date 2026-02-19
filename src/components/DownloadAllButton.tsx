@@ -4,6 +4,7 @@ import { useState } from 'react'
 import JSZip from 'jszip'
 import { type Receipt } from '@/lib/supabase'
 import { generateFilename, getExtensionFromUrl } from '@/lib/downloadUtils'
+import { getImageSrc } from '@/lib/imageUrl'
 
 interface DownloadAllButtonProps {
   receipts: Receipt[]
@@ -34,7 +35,8 @@ export function DownloadAllButton({ receipts, tripName }: DownloadAllButtonProps
         if (!receipt.image_url) continue
 
         try {
-          const response = await fetch(receipt.image_url)
+          const proxiedUrl = getImageSrc(receipt.image_url)
+          const response = await fetch(proxiedUrl)
           if (!response.ok) continue
 
           const blob = await response.blob()

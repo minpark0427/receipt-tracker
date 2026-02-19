@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { type Receipt } from '@/lib/supabase'
 import { downloadReceiptImage } from '@/lib/downloadUtils'
+import { getImageSrc } from '@/lib/imageUrl'
 
 interface ReceiptEditModalProps {
   receipt: Receipt
@@ -35,7 +36,7 @@ export function ReceiptEditModal({ receipt, onClose, onSave, onDelete }: Receipt
     if (!receipt.image_url) return
     setDownloading(true)
     try {
-      await downloadReceiptImage(receipt.image_url, receipt.location, receipt.date)
+      await downloadReceiptImage(getImageSrc(receipt.image_url), receipt.location, receipt.date)
     } catch {
       setError('Download failed')
     } finally {
@@ -128,7 +129,7 @@ export function ReceiptEditModal({ receipt, onClose, onSave, onDelete }: Receipt
         {receipt.image_url && (
           <div className="p-4 border-b border-zinc-200 dark:border-zinc-700">
             <div className="relative group">
-              <img src={receipt.image_url} alt="Receipt" className="w-full h-48 object-contain rounded" />
+              <img src={getImageSrc(receipt.image_url)} alt="Receipt" className="w-full h-48 object-contain rounded" />
               <button
                 onClick={handleDownload}
                 disabled={downloading}

@@ -10,6 +10,7 @@ import { useRealtimeReceipts } from '@/hooks/useRealtimeReceipts'
 import { ExportButton } from '@/components/ExportButton'
 import { DownloadAllButton } from '@/components/DownloadAllButton'
 import { useToast } from '@/components/Toast'
+import { getImageSrc } from '@/lib/imageUrl'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -366,7 +367,7 @@ export default function TripPage({ params }: TripPageProps) {
               >
                 {receipt.image_url && (
                   <img
-                    src={receipt.image_url}
+                    src={getImageSrc(receipt.image_url)}
                     alt="Receipt"
                     className="w-16 h-16 object-cover rounded"
                   />

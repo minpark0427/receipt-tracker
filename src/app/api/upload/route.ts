@@ -35,11 +35,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: uploadError.message }, { status: 500 })
     }
 
-    const { data: signedUrlData } = await supabase.storage
-      .from('receipt-images')
-      .createSignedUrl(filePath, 60 * 60 * 24 * 7)
-
-    const imageUrl = signedUrlData?.signedUrl || null
+    const imageUrl = filePath
 
     const { data: receipt, error: receiptError } = await supabase
       .from('receipts')
