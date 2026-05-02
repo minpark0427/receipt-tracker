@@ -1,7 +1,8 @@
 import type { Receipt } from './supabase'
 
-export function generateCsv(receipts: Receipt[]): string {
-  const headers = ['Date', 'Time', 'Location', 'Cost', 'Currency']
+export function generateCsv(receipts: Receipt[], baseCurrency?: string): string {
+  const base = baseCurrency || 'KRW'
+  const headers = ['Date', 'Time', 'Location', 'Original Cost', 'Currency', 'Converted Cost', 'Base Currency', 'Exchange Rate']
   const rows = receipts
     .sort((a, b) => {
       const dateA = a.date || ''
@@ -13,7 +14,10 @@ export function generateCsv(receipts: Receipt[]): string {
       r.time || '',
       escapeCsvField(r.location || ''),
       r.cost?.toString() || '',
-      r.original_currency || 'USD'
+      r.original_currency || base,
+      r.converted_cost?.toString() || r.cost?.toString() || '',
+      base,
+      r.exchange_rate?.toString() || ''
     ])
 
   const csvContent = [
@@ -31,8 +35,8 @@ function escapeCsvField(field: string): string {
   return field
 }
 
-export function downloadCsv(receipts: Receipt[], tripId: string): void {
-  const csv = generateCsv(receipts)
+export function downloadCsv(receipts: Receipt[], tripId: string, baseCurrency?: string): void {
+  const csv = generateCsv(receipts, baseCurrency)
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   

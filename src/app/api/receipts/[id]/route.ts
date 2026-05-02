@@ -9,7 +9,7 @@ export async function PATCH(
     const { id } = await params
     const body = await request.json()
 
-    const allowedFields = ['date', 'time', 'location', 'cost', 'original_currency']
+    const allowedFields = ['date', 'time', 'location', 'cost', 'original_currency', 'converted_cost', 'exchange_rate']
     const updates: Record<string, unknown> = {}
 
     for (const field of allowedFields) {

@@ -1,12 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { type Receipt } from '@/lib/supabase'
+import { type Receipt, type ExchangeRate } from '@/lib/supabase'
 import { downloadReceiptImage } from '@/lib/downloadUtils'
 import { getImageSrc } from '@/lib/imageUrl'
+import { CURRENCIES, getCurrencySymbol, formatCurrency } from '@/lib/currency'
 
 interface ReceiptEditModalProps {
   receipt: Receipt
+  baseCurrency?: string
+  rates?: ExchangeRate[]
   onClose: () => void
   onSave: (updatedReceipt: Receipt) => void
   onDelete?: (receiptId: string) => void
@@ -23,14 +26,20 @@ function ConfidenceBadge({ confidence }: { confidence: number | null }) {
   )
 }
 
-export function ReceiptEditModal({ receipt, onClose, onSave, onDelete }: ReceiptEditModalProps) {
+export function ReceiptEditModal({ receipt, baseCurrency = 'KRW', rates = [], onClose, onSave, onDelete }: ReceiptEditModalProps) {
   const [date, setDate] = useState(receipt.date || '')
   const [time, setTime] = useState(receipt.time || '')
   const [location, setLocation] = useState(receipt.location || '')
   const [cost, setCost] = useState(receipt.cost?.toString() || '')
+  const [currency, setCurrency] = useState(receipt.original_currency || baseCurrency)
   const [saving, setSaving] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const costNum = parseFloat(cost) || 0
+  const rate = rates.find(r => r.from_currency === currency)
+  const isBaseCurrency = currency === baseCurrency
+  const convertedAmount = isBaseCurrency ? costNum : (rate ? costNum * rate.rate : null)
 
   const handleDownload = async () => {
     if (!receipt.image_url) return
@@ -64,7 +73,10 @@ export function ReceiptEditModal({ receipt, onClose, onSave, onDelete }: Receipt
           date: date || null,
           time: time || null,
           location: location || null,
-          cost: cost ? parseFloat(cost) : null
+          cost: cost ? parseFloat(cost) : null,
+          original_currency: currency || null,
+          converted_cost: convertedAmount,
+          exchange_rate: rate?.rate || null
         })
       })
 
@@ -191,17 +203,35 @@ export function ReceiptEditModal({ receipt, onClose, onSave, onDelete }: Receipt
 
           <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-              Cost ($)
+              Cost
             </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={cost}
-              onChange={e => setCost(e.target.value)}
-              placeholder="0.00"
-              className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-            />
+            <div className="flex gap-2">
+              <select
+                value={currency}
+                onChange={e => setCurrency(e.target.value)}
+                className="w-24 px-2 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm"
+              >
+                {CURRENCIES.map(c => (
+                  <option key={c.code} value={c.code}>{c.symbol} {c.code}</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={cost}
+                onChange={e => setCost(e.target.value)}
+                placeholder="0.00"
+                className="flex-1 px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+              />
+            </div>
+            {!isBaseCurrency && costNum > 0 && (
+              <p className="mt-1 text-xs text-zinc-500">
+                {convertedAmount !== null
+                  ? `= ${formatCurrency(convertedAmount, baseCurrency)} (1 ${currency} = ${rate?.rate} ${baseCurrency})`
+                  : `No ${currency} exchange rate set`}
+              </p>
+            )}
           </div>
 
           {error && (

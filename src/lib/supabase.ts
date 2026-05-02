@@ -22,6 +22,16 @@ export interface Receipt {
   location: string | null
   cost: number | null
   original_currency: string | null
+  converted_cost: number | null
+  exchange_rate: number | null
   ocr_confidence: number | null
+  created_at: string
+}
+
+export interface ExchangeRate {
+  id: string
+  trip_id: string
+  from_currency: string
+  rate: number
   created_at: string
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase, type Trip } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import { CURRENCIES, getCurrencySymbol } from '@/lib/currency'
 
 export default function Home() {
   const router = useRouter()
@@ -16,6 +17,24 @@ export default function Home() {
   const [tripToDelete, setTripToDelete] = useState<Trip | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [newTripBudget, setNewTripBudget] = useState('1280')
+  const [newTripCurrency, setNewTripCurrency] = useState('KRW')
+  const [exchangeRates, setExchangeRates] = useState<{ currency: string; rate: string }[]>([])
+
+  function addExchangeRate() {
+    const usedCurrencies = [newTripCurrency, ...exchangeRates.map(r => r.currency)]
+    const available = CURRENCIES.find(c => !usedCurrencies.includes(c.code))
+    if (available) {
+      setExchangeRates(prev => [...prev, { currency: available.code, rate: '' }])
+    }
+  }
+
+  function removeExchangeRate(index: number) {
+    setExchangeRates(prev => prev.filter((_, i) => i !== index))
+  }
+
+  function updateExchangeRate(index: number, field: 'currency' | 'rate', value: string) {
+    setExchangeRates(prev => prev.map((r, i) => i === index ? { ...r, [field]: value } : r))
+  }
 
   useEffect(() => {
     loadTrips()
@@ -39,15 +58,27 @@ export default function Home() {
       const budget = parseFloat(newTripBudget) || 1280
       const { data, error } = await supabase
         .from('trips')
-        .insert({ 
+        .insert({
           name: newTripName.trim(),
-          budget, 
-          currency: 'USD' 
+          budget,
+          currency: newTripCurrency
         })
         .select()
         .single()
 
       if (error) throw error
+
+      // Save exchange rates
+      const validRates = exchangeRates.filter(r => r.rate && parseFloat(r.rate) > 0)
+      if (validRates.length > 0) {
+        await supabase.from('exchange_rates').insert(
+          validRates.map(r => ({
+            trip_id: data.id,
+            from_currency: r.currency,
+            rate: parseFloat(r.rate)
+          }))
+        )
+      }
 
       localStorage.setItem('tripId', data.id)
       router.push(`/${data.id}`)
@@ -124,7 +155,19 @@ export default function Home() {
             />
             <div className="mb-4">
               <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">
-                Budget (USD)
+                Base Currency
+              </label>
+              <select
+                value={newTripCurrency}
+                onChange={(e) => setNewTripCurrency(e.target.value)}
+                className="w-full px-4 py-3 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 mb-3"
+              >
+                {CURRENCIES.map(c => (
+                  <option key={c.code} value={c.code}>{c.symbol} {c.code} - {c.name}</option>
+                ))}
+              </select>
+              <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">
+                Budget ({getCurrencySymbol(newTripCurrency)})
               </label>
               <input
                 type="number"
@@ -136,12 +179,63 @@ export default function Home() {
                 className="w-full px-4 py-3 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
               />
             </div>
+
+            {exchangeRates.length > 0 && (
+              <div className="mb-4 space-y-2">
+                <label className="block text-sm text-zinc-600 dark:text-zinc-400">
+                  Exchange Rates
+                </label>
+                {exchangeRates.map((er, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-sm text-zinc-500 w-6">1</span>
+                    <select
+                      value={er.currency}
+                      onChange={(e) => updateExchangeRate(i, 'currency', e.target.value)}
+                      className="flex-1 px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm"
+                    >
+                      {CURRENCIES.filter(c => c.code !== newTripCurrency && (c.code === er.currency || !exchangeRates.some(r => r.currency === c.code))).map(c => (
+                        <option key={c.code} value={c.code}>{c.symbol} {c.code}</option>
+                      ))}
+                    </select>
+                    <span className="text-sm text-zinc-500">=</span>
+                    <input
+                      type="number"
+                      value={er.rate}
+                      onChange={(e) => updateExchangeRate(i, 'rate', e.target.value)}
+                      placeholder="0"
+                      min="0"
+                      step="0.0001"
+                      className="w-28 px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm"
+                    />
+                    <span className="text-sm text-zinc-500">{getCurrencySymbol(newTripCurrency)}</span>
+                    <button
+                      onClick={() => removeExchangeRate(i)}
+                      className="p-1 text-zinc-400 hover:text-red-500"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={addExchangeRate}
+              className="w-full mb-4 px-4 py-2 border border-dashed border-zinc-300 dark:border-zinc-600 text-zinc-500 rounded-lg text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+            >
+              + Add Exchange Rate
+            </button>
             <div className="flex gap-3">
               <button
                 onClick={() => {
                   setShowCreateForm(false)
                   setNewTripName('')
                   setNewTripBudget('1280')
+                  setNewTripCurrency('KRW')
+                  setExchangeRates([])
                 }}
                 className="flex-1 px-4 py-3 border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-lg font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               >

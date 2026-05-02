@@ -6,12 +6,13 @@ import { downloadCsv } from '@/lib/exportCsv'
 interface ExportButtonProps {
   receipts: Receipt[]
   tripId: string
+  baseCurrency?: string
 }
 
-export function ExportButton({ receipts, tripId }: ExportButtonProps) {
+export function ExportButton({ receipts, tripId, baseCurrency }: ExportButtonProps) {
   const handleExport = () => {
     if (receipts.length === 0) return
-    downloadCsv(receipts, tripId)
+    downloadCsv(receipts, tripId, baseCurrency)
   }
 
   return (

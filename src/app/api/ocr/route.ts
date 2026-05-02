@@ -23,6 +23,42 @@ export async function POST(request: NextRequest) {
       }, { status: result.code === 'NO_API_KEY' ? 503 : 400 })
     }
 
+    // Look up trip to get base currency and exchange rates
+    const { data: receipt } = await supabase
+      .from('receipts')
+      .select('trip_id')
+      .eq('id', receiptId)
+      .single()
+
+    let convertedCost = null
+    let exchangeRate = null
+
+    if (receipt && result.total && result.currency) {
+      const { data: tripData } = await supabase
+        .from('trips')
+        .select('currency')
+        .eq('id', receipt.trip_id)
+        .single()
+
+      const baseCurrency = tripData?.currency || 'KRW'
+
+      if (result.currency !== baseCurrency) {
+        const { data: rateData } = await supabase
+          .from('exchange_rates')
+          .select('rate')
+          .eq('trip_id', receipt.trip_id)
+          .eq('from_currency', result.currency)
+          .single()
+
+        if (rateData) {
+          exchangeRate = rateData.rate
+          convertedCost = result.total * rateData.rate
+        }
+      } else {
+        convertedCost = result.total
+      }
+    }
+
     const { error: updateError } = await supabase
       .from('receipts')
       .update({
@@ -31,6 +67,8 @@ export async function POST(request: NextRequest) {
         time: result.time,
         cost: result.total,
         original_currency: result.currency,
+        converted_cost: convertedCost,
+        exchange_rate: exchangeRate,
         ocr_confidence: result.confidence.overall
       })
       .eq('id', receiptId)
